@@ -1,0 +1,19 @@
+name: 'Trdl publish'
+description: 'Publish releases defined in the project repository configuration (configuration file trdl_channels.yaml in the trdl branch by default)'
+inputs:
+  vault-endpoint:
+    description: 'Address of the vault server running one or more vault-plugin-secrets-trdl instances'
+    required: true
+  project-name:
+    description: 'Project name, which is vault-plugin-secrets-trdl mount point instance'
+    required: true
+  vault-login:
+    description: 'Vault login to receive single use token'
+  vault-password:
+    description: 'Vault password to receive single use token'
+  vault-token:
+    description: 'Client token to perform vault requests'
+
+runs:
+  using: 'node12'
+  main: '../dist/actions/publish/index.js'
