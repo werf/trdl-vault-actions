@@ -1,0 +1,24 @@
+name: 'Trdl releaser'
+description: 'Release project git tag using trdl build server'
+inputs:
+  vault-addr:
+    description: 'Address of the vault server running one or more vault-plugin-secrets-trdl instances'
+    required: true
+  project-name:
+    description: 'Project name, which is vault-plugin-secrets-trdl mount point instance'
+    required: true
+  git-tag:
+    description: 'Git tag of the application repository which will be used to build a release'
+    required: true
+  vault-auth-method:
+    description: 'Select auth method to perform login into vault to get client token. Supported methods: approle'
+  vault-role-id:
+    description: 'Role ID for an approle auth method'
+  vault-secret-id:
+    description: 'Secret ID for an approle auth method'
+  vault-token:
+    description: 'Specify client token to perform vault requests'
+
+runs:
+  using: 'node12'
+  main: '../dist/actions/release/index.js'
