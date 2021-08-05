@@ -1,9 +1,9 @@
-# trdl-actions
+# trdl-vault-actions
 
 Set of actions to publish releases of applications using trdl vault server:
 
-- [werf/trdl-actions/release](#release);
-- [werf/trdl-actions/publish](#publish).
+- [werf/trdl-vault-actions/release](#release);
+- [werf/trdl-vault-actions/publish](#publish).
 
 ## Release
 
@@ -13,7 +13,7 @@ release:
   runs-on: ubuntu-latest
   steps:
     - name: Release
-      uses: werf/trdl-actions/release@main
+      uses: werf/trdl-vault-actions/release@main
       with:
         vault-addr: ${{ secrets.VAULT_ADDR }}
         vault-token: ${{ secrets.VAULT_TOKEN }}
@@ -29,7 +29,7 @@ release:
   runs-on: ubuntu-latest
   steps:
     - name: Release
-      uses: werf/trdl-actions/publish@main
+      uses: werf/trdl-vault-actions/publish@main
       with:
         vault-addr: ${{ secrets.VAULT_ADDR }}
         vault-token: ${{ secrets.VAULT_TOKEN }}
