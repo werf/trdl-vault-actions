@@ -6,6 +6,8 @@ type TaskLogger = (taskID: string, msg: string) => void
 
 interface operationContext {
     contextCancelled: boolean
+    watchTaskLogsActive: boolean
+    watchTaskStatusActive: boolean
     trdlTaskStatus: any
     err?: Error
 }
@@ -13,6 +15,8 @@ interface operationContext {
 function newOperationContext(): operationContext {
     return {
         contextCancelled: false,
+        watchTaskLogsActive: false,
+        watchTaskStatusActive: false,
         trdlTaskStatus: null,
     }
 }
@@ -92,18 +96,20 @@ export class TrdlClient {
 
         while (true) {
             if (ctx.err != null) {
-                ctx.contextCancelled = true
+                await this.gracefulShutdown(ctx)
+
+                console.log(`[ERROR] Task ${taskID} error: ${ctx.err}`)
                 throw ctx.err
             }
 
             if (ctx.trdlTaskStatus != null) {
                 if (ctx.trdlTaskStatus.status == "FAILED") {
-                    ctx.contextCancelled = true
+                    await this.gracefulShutdown(ctx)
                     throw `trdl task ${taskID} have failed: ${ctx.trdlTaskStatus.reason}`
                 }
 
                 if (ctx.trdlTaskStatus.status == "SUCCEEDED") {
-                    ctx.contextCancelled = true
+                    await this.gracefulShutdown(ctx)
                     return
                 }
             }
@@ -112,28 +118,55 @@ export class TrdlClient {
         }
     }
 
+    private async gracefulShutdown(ctx: operationContext): Promise<void> {
+        ctx.contextCancelled = true
+
+        while (true) {
+            //console.log(`[DEBUG] Check context "${ctx.watchTaskStatusActive}" "${ctx.watchTaskLogsActive}"`)
+            if (!ctx.watchTaskStatusActive && !ctx.watchTaskLogsActive) {
+                return
+            }
+            await this.delay(200)
+        }
+
+        //console.log(`[DEBUG] graceful shutdown done`)
+    }
+
     private async watchTaskStatus(ctx: operationContext, projectName: string, taskID: string): Promise<void> {
+        ctx.watchTaskStatusActive = true
+
+        var shutdown = false
+
         while (true) {
             if (ctx.contextCancelled) {
-                console.log(`[DEBUG] Watch task ${taskID} status operation has been stopped`)
-                return
+                // Perform last request after context has been cancelled for graceful shutdown
+                shutdown = true
             }
 
             var resp = await this.vaultClient.read(`${projectName}/task/${taskID}`, await this.prepareVaultRequestOptions())
 
             ctx.trdlTaskStatus = resp.data
 
+            if (shutdown) {
+                ctx.watchTaskStatusActive = false
+                //console.log(`[DEBUG] Watch task ${taskID} status operation has been stopped`)
+                break
+            }
+
             await this.delay(200)
         }
     }
 
     private async watchTaskLogs(ctx: operationContext, projectName: string, taskID: string, taskLogger: TaskLogger): Promise<void> {
+        ctx.watchTaskLogsActive = true
+
         var cursor = 0
+        var shutdown = false
 
         while (true) {
             if (ctx.contextCancelled) {
-                console.log(`[DEBUG] Watch task ${taskID} logs operation has been stopped`)
-                return
+                // Perform last request after context has been cancelled for graceful shutdown
+                shutdown = true
             }
 
             // console.log(`[DEBUG] cursor before request = ${cursor}`)
@@ -154,7 +187,13 @@ export class TrdlClient {
 
             // console.log(`[DEBUG] cursor after request = ${cursor}`)
 
-            await this.delay(500)
+            if (shutdown) {
+                ctx.watchTaskLogsActive = false
+                //console.log(`[DEBUG] Watch task ${taskID} logs operation has been stopped`)
+                break
+            }
+
+            await this.delay(200)
         }
     }
 

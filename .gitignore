@@ -1,6 +1,7 @@
 *.swp
 *.gem
 .tags
+.idea
 
 npm-debug.log*
 node_modules/

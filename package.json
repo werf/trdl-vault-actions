@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "client side package to work with trdl release server",
   "scripts": {
-    "dist": "./dist.sh"
+    "dist": "./dist.sh",
+    "build": "npx tsc --build"
   },
   "repository": {
     "type": "git",
