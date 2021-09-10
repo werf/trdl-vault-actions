@@ -1,6 +1,7 @@
 import NodeVault = require("node-vault")
 import util = require("util")
 import os = require("os")
+import {Option} from "node-vault";
 
 type TaskLogger = (taskID: string, msg: string) => void
 
@@ -69,13 +70,31 @@ export class TrdlClient {
         return opts
     }
 
+    private async longRunningRequest(path: string, data: any, requestOptions?: NodeVault.Option): Promise<any> {
+        while (true) {
+            try {
+                return await this.vaultClient.write(path, data, requestOptions)
+            } catch(e) {
+                 if (e.message == "busy") {
+                     console.log(`Will retry request at ${path} after 5sec: server is busy at the moment`)
+
+                     await this.delay(5000 )
+
+                     continue
+                 }
+
+                 throw e
+            }
+        }
+    }
+
     async release(projectName: string, gitTag: string, taskLogger: TaskLogger): Promise<void> {
-        var resp = await this.vaultClient.write(`${projectName}/release`, { git_tag: gitTag }, await this.prepareVaultRequestOptions())
+        var resp = await this.longRunningRequest(`${projectName}/release`, { git_tag: gitTag }, await this.prepareVaultRequestOptions())
         return this.watchTask(projectName, resp.data.task_uuid, taskLogger)
     }
 
     async publish(projectName: string, taskLogger: TaskLogger): Promise<void> {
-        var resp = await this.vaultClient.write(`${projectName}/publish`, {}, await this.prepareVaultRequestOptions())
+        var resp = await this.longRunningRequest(`${projectName}/publish`, {}, await this.prepareVaultRequestOptions())
         return this.watchTask(projectName, resp.data.task_uuid, taskLogger)
     }
 
