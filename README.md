@@ -29,11 +29,11 @@ release:
 ## Publish
 
 ```
-release:
-  name: Release
+publish:
+  name: Publish
   runs-on: ubuntu-latest
   steps:
-    - name: Release
+    - name: Publish
       uses: werf/trdl-vault-actions/publish@main
       with:
         vault-addr: ${{ secrets.VAULT_ADDR }}
