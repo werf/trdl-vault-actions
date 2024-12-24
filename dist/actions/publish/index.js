@@ -38385,7 +38385,9 @@ const core = __importStar(__nccwpck_require__(5859));
 function getActionTrdlClientOptions() {
     var opts;
     opts = {
-        vaultAddr: core.getInput('vault-addr', { required: true })
+        vaultAddr: core.getInput('vault-addr', { required: true }),
+        retry: core.getInput('retry', { required: false }) === 'true' || false,
+        maxDelay: parseInt(core.getInput('max-delay', { required: false })) || 21600
     };
     var vaultToken = core.getInput('vault-token');
     if (vaultToken != "") {
@@ -38503,6 +38505,8 @@ class TrdlClient {
     constructor(opts) {
         this.vaultToken = opts.vaultToken;
         this.vaultApproleAuth = opts.vaultApproleAuth;
+        this.retry = opts.retry;
+        this.maxDelay = opts.maxDelay;
         if (this.vaultToken != null && this.vaultApproleAuth != null) {
             throw `unable to use vaultToken and vaultApproleAuth at the same time`;
         }
@@ -38551,9 +38555,27 @@ class TrdlClient {
     }
     publish(projectName, taskLogger) {
         return __awaiter(this, void 0, void 0, function* () {
-            var resp = yield this.longRunningRequest(`${projectName}/publish`, {}, yield this.prepareVaultRequestOptions());
-            console.log(`[DEBUG] ${JSON.stringify(resp, null, 2)}`);
-            return this.watchTask(projectName, resp.data.task_uuid, taskLogger);
+            const maxBackoff = this.maxDelay * 1000;
+            const startTime = Date.now();
+            let backoff = 60000;
+            while (Date.now() - startTime < maxBackoff) {
+                try {
+                    const resp = yield this.longRunningRequest(`${projectName}/publish`, {}, yield this.prepareVaultRequestOptions());
+                    yield this.watchTask(projectName, resp.data.task_uuid, taskLogger);
+                    return;
+                }
+                catch (e) {
+                    console.error(`[ERROR] Error while processing task: ${e.message}`);
+                }
+                if (!this.retry) {
+                    console.log(`[INFO] Retry is disabled. Exiting.`);
+                    throw new Error("Publish operation failed and retry is disabled.");
+                }
+                console.log(`[INFO] Retrying publish request after ${backoff} ms...`);
+                yield this.delay(backoff);
+                backoff = Math.min(backoff * 2, maxBackoff);
+            }
+            throw new Error("Publish operation exceeded maximum duration");
         });
     }
     watchTask(projectName, taskID, taskLogger) {

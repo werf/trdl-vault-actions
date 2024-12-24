@@ -15,6 +15,22 @@ inputs:
     description: 'Secret ID for an approle auth method'
   vault-token:
     description: 'Specify client token to perform vault requests'
+  retry:
+    description: |
+      A flag that determines whether retries should be enabled in case of failure. 
+      If set to `true`, the system will retry failed operations with an increasing backoff delay until either the operation succeeds or the maximum delay (`maxDelay`) is reached.
+      If set to `false`, no retries will occur, and the task will immediately fail upon encountering an error.
+    required: false
+    default: 'false'
+  maxDelay:
+    description: |
+      The maximum delay time in seconds to be used for retries (backoff). 
+      If the `retry` flag is set to `true`, this parameter defines the maximum amount of time
+      the task will wait between each retry in case of failure.
+      If the `retry` flag is set to `false`, backoff will not be applied.
+      default: 6 hours (equals to github job timeout)
+    required: false
+    default: '21600'
 
 runs:
   using: 'node12'
