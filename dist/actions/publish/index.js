@@ -38560,7 +38560,7 @@ class TrdlClient {
             let backoff = 60000;
             while (Date.now() - startTime < maxBackoff) {
                 try {
-                    const resp = yield this.longRunningRequest(`${projectName}/publish`, {}, yield this.prepareVaultRequestOptions());
+                    var resp = yield this.longRunningRequest(`${projectName}/publish`, {}, yield this.prepareVaultRequestOptions());
                     yield this.watchTask(projectName, resp.data.task_uuid, taskLogger);
                     return;
                 }
@@ -38568,7 +38568,6 @@ class TrdlClient {
                     console.error(`[ERROR] Error while processing task: ${e.message}`);
                 }
                 if (!this.retry) {
-                    console.log(`[INFO] Retry is disabled. Exiting.`);
                     throw new Error("Publish operation failed and retry is disabled.");
                 }
                 console.log(`[INFO] Retrying publish request after ${backoff} ms...`);
