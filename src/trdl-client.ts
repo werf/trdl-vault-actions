@@ -95,6 +95,7 @@ export class TrdlClient {
 
     async publish(projectName: string, taskLogger: TaskLogger): Promise<void> {
         var resp = await this.longRunningRequest(`${projectName}/publish`, {}, await this.prepareVaultRequestOptions())
+        console.log(`[DEBUG] ${resp}`)
         return this.watchTask(projectName, resp.data.task_uuid, taskLogger)
     }
 
