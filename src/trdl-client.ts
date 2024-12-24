@@ -95,8 +95,28 @@ export class TrdlClient {
     }
 
     async release(projectName: string, gitTag: string, taskLogger: TaskLogger): Promise<void> {
-        var resp = await this.longRunningRequest(`${projectName}/release`, { git_tag: gitTag }, await this.prepareVaultRequestOptions())
-        return this.watchTask(projectName, resp.data.task_uuid, taskLogger)
+        const maxBackoff = this.maxDelay * 1000; 
+        const startTime = Date.now();
+        let backoff = 60000;
+
+        while (Date.now() - startTime < maxBackoff) {
+            try {
+                const resp = await this.longRunningRequest(`${projectName}/release`, { git_tag: gitTag }, await this.prepareVaultRequestOptions())
+                await this.watchTask(projectName, resp.data.task_uuid, taskLogger)
+                return;
+            } catch (e) {
+                console.error(`[ERROR] ${e}`);
+            }
+            if (!this.retry) {
+                throw `Release operation failed and retry is disabled`
+            }
+            console.log(`[INFO] Retrying release request after ${backoff / 1000 / 60} minutes...`);
+            await this.delay(backoff);
+
+            backoff = Math.min(backoff * 2, maxBackoff);
+        }
+
+        throw `Release operation exceeded maximum duration`
     }
 
     async publish(projectName: string, taskLogger: TaskLogger): Promise<void> {
@@ -121,7 +141,7 @@ export class TrdlClient {
             backoff = Math.min(backoff * 2, maxBackoff);
         }
 
-        throw new Error("Publish operation exceeded maximum duration");
+        throw `Publish operation exceeded maximum duration`
     }
 
     private async watchTask(projectName: string, taskID: string, taskLogger: TaskLogger): Promise<void> {
