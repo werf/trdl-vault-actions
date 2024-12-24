@@ -38552,7 +38552,7 @@ class TrdlClient {
     publish(projectName, taskLogger) {
         return __awaiter(this, void 0, void 0, function* () {
             var resp = yield this.longRunningRequest(`${projectName}/publish`, {}, yield this.prepareVaultRequestOptions());
-            console.log(`[DEBUG] ${resp}`);
+            console.log(`[DEBUG] ${JSON.stringify(resp, null, 2)}`);
             return this.watchTask(projectName, resp.data.task_uuid, taskLogger);
         });
     }
