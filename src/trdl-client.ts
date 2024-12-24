@@ -106,16 +106,16 @@ export class TrdlClient {
         
         while (Date.now() - startTime < maxBackoff) {
             try {
-                var resp = await this.longRunningRequest(`${projectName}/publish`, {}, await this.prepareVaultRequestOptions());
+                const resp = await this.longRunningRequest(`${projectName}/publish`, {}, await this.prepareVaultRequestOptions());
                 await this.watchTask(projectName, resp.data.task_uuid, taskLogger);
                 return;
             } catch (e) {
-                console.error(`[ERROR] Error while processing task: ${e.message}`);
+                console.error(`[ERROR] Error while processing task: ${e.message || e}`);
             }
             if (!this.retry) {
                 throw new Error("Publish operation failed and retry is disabled.");
             }
-            console.log(`[INFO] Retrying publish request after ${backoff} ms...`);
+            console.log(`[INFO] Retrying publish request after ${backoff / 1000 / 60} minutes...`);
             await this.delay(backoff);
 
             backoff = Math.min(backoff * 2, maxBackoff);

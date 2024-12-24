@@ -38560,17 +38560,17 @@ class TrdlClient {
             let backoff = 60000;
             while (Date.now() - startTime < maxBackoff) {
                 try {
-                    var resp = yield this.longRunningRequest(`${projectName}/publish`, {}, yield this.prepareVaultRequestOptions());
+                    const resp = yield this.longRunningRequest(`${projectName}/publish`, {}, yield this.prepareVaultRequestOptions());
                     yield this.watchTask(projectName, resp.data.task_uuid, taskLogger);
                     return;
                 }
                 catch (e) {
-                    console.error(`[ERROR] Error while processing task: ${e.message}`);
+                    console.error(`[ERROR] Error while processing task: ${e.message || e}`);
                 }
                 if (!this.retry) {
                     throw new Error("Publish operation failed and retry is disabled.");
                 }
-                console.log(`[INFO] Retrying publish request after ${backoff} ms...`);
+                console.log(`[INFO] Retrying publish request after ${backoff / 1000 / 60} minutes...`);
                 yield this.delay(backoff);
                 backoff = Math.min(backoff * 2, maxBackoff);
             }
