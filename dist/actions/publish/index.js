@@ -38555,7 +38555,7 @@ class TrdlClient {
             while (Date.now() - startTime < maxBackoff) {
                 try {
                     const resp = yield this.longRunningRequest(path, data, yield this.prepareVaultRequestOptions());
-                    yield action(path, resp.data.task_uuid, taskLogger);
+                    yield action(resp.data.task_uuid, taskLogger);
                     return;
                 }
                 catch (e) {
@@ -38573,12 +38573,16 @@ class TrdlClient {
     }
     release(projectName, gitTag, taskLogger) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.withBackoffRequest(`${projectName}/release`, { git_tag: gitTag }, taskLogger, this.watchTask.bind(this));
+            yield this.withBackoffRequest(`${projectName}/release`, { git_tag: gitTag }, taskLogger, (taskID, taskLogger) => __awaiter(this, void 0, void 0, function* () {
+                yield this.watchTask(projectName, taskID, taskLogger);
+            }));
         });
     }
     publish(projectName, taskLogger) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.withBackoffRequest(`${projectName}/publish`, {}, taskLogger, this.watchTask.bind(this));
+            yield this.withBackoffRequest(`${projectName}/publish`, {}, taskLogger, (taskID, taskLogger) => __awaiter(this, void 0, void 0, function* () {
+                yield this.watchTask(projectName, taskID, taskLogger);
+            }));
         });
     }
     watchTask(projectName, taskID, taskLogger) {

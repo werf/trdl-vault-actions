@@ -98,16 +98,16 @@ export class TrdlClient {
         path: string, 
         data: any, 
         taskLogger: TaskLogger,
-        action: (projectName: string, taskID: string, taskLogger: TaskLogger) => Promise<void>
+        action: (taskID: string, taskLogger: TaskLogger) => Promise<void>
     ): Promise<void> {
-        const maxBackoff = this.maxDelay * 1000; 
+        const maxBackoff = this.maxDelay * 1000;
         const startTime = Date.now();
         let backoff = 60000;
 
         while (Date.now() - startTime < maxBackoff) {
             try {
                 const resp = await this.longRunningRequest(path, data, await this.prepareVaultRequestOptions());
-                await action(path, resp.data.task_uuid, taskLogger);
+                await action(resp.data.task_uuid, taskLogger); 
                 return;
             } catch (e) {
                 console.error(`[ERROR] ${e}`);
@@ -129,9 +129,11 @@ export class TrdlClient {
     async release(projectName: string, gitTag: string, taskLogger: TaskLogger): Promise<void> {
         await this.withBackoffRequest(
             `${projectName}/release`,
-            { git_tag: gitTag },
-            taskLogger,
-            this.watchTask.bind(this)
+            { git_tag: gitTag }, 
+            taskLogger, 
+            async (taskID, taskLogger) => {
+                await this.watchTask(projectName, taskID, taskLogger);
+            }
         );
     }
 
@@ -140,7 +142,9 @@ export class TrdlClient {
             `${projectName}/publish`,
             {},
             taskLogger,
-            this.watchTask.bind(this)
+            async (taskID, taskLogger) => {
+                await this.watchTask(projectName, taskID, taskLogger);
+            }
         );
     }
 
