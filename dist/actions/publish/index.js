@@ -38547,52 +38547,38 @@ class TrdlClient {
             }
         });
     }
-    release(projectName, gitTag, taskLogger) {
+    withBackoffRequest(path, data, taskLogger, action) {
         return __awaiter(this, void 0, void 0, function* () {
             const maxBackoff = this.maxDelay * 1000;
             const startTime = Date.now();
             let backoff = 60000;
             while (Date.now() - startTime < maxBackoff) {
                 try {
-                    const resp = yield this.longRunningRequest(`${projectName}/release`, { git_tag: gitTag }, yield this.prepareVaultRequestOptions());
-                    yield this.watchTask(projectName, resp.data.task_uuid, taskLogger);
+                    const resp = yield this.longRunningRequest(path, data, yield this.prepareVaultRequestOptions());
+                    yield action(path, resp.data.task_uuid, taskLogger);
                     return;
                 }
                 catch (e) {
                     console.error(`[ERROR] ${e}`);
                 }
                 if (!this.retry) {
-                    throw `Release operation failed and retry is disabled`;
+                    throw `${path} operation failed and retry is disabled`;
                 }
-                console.log(`[INFO] Retrying release request after ${backoff / 1000 / 60} minutes...`);
+                console.log(`[INFO] Retrying ${path} after ${backoff / 1000 / 60} minutes...`);
                 yield this.delay(backoff);
                 backoff = Math.min(backoff * 2, maxBackoff);
             }
-            throw `Release operation exceeded maximum duration`;
+            throw `${path} operation exceeded maximum duration`;
+        });
+    }
+    release(projectName, gitTag, taskLogger) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.withBackoffRequest(`${projectName}/release`, { git_tag: gitTag }, taskLogger, this.watchTask.bind(this));
         });
     }
     publish(projectName, taskLogger) {
         return __awaiter(this, void 0, void 0, function* () {
-            const maxBackoff = this.maxDelay * 1000;
-            const startTime = Date.now();
-            let backoff = 60000;
-            while (Date.now() - startTime < maxBackoff) {
-                try {
-                    const resp = yield this.longRunningRequest(`${projectName}/publish`, {}, yield this.prepareVaultRequestOptions());
-                    yield this.watchTask(projectName, resp.data.task_uuid, taskLogger);
-                    return;
-                }
-                catch (e) {
-                    console.error(`[ERROR] ${e}`);
-                }
-                if (!this.retry) {
-                    throw `Publish operation failed and retry is disabled`;
-                }
-                console.log(`[INFO] Retrying publish request after ${backoff / 1000 / 60} minutes...`);
-                yield this.delay(backoff);
-                backoff = Math.min(backoff * 2, maxBackoff);
-            }
-            throw `Publish operation exceeded maximum duration`;
+            yield this.withBackoffRequest(`${projectName}/publish`, {}, taskLogger, this.watchTask.bind(this));
         });
     }
     watchTask(projectName, taskID, taskLogger) {

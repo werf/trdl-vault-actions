@@ -94,54 +94,54 @@ export class TrdlClient {
         }
     }
 
-    async release(projectName: string, gitTag: string, taskLogger: TaskLogger): Promise<void> {
+    private async withBackoffRequest(
+        path: string, 
+        data: any, 
+        taskLogger: TaskLogger,
+        action: (projectName: string, taskID: string, taskLogger: TaskLogger) => Promise<void>
+    ): Promise<void> {
         const maxBackoff = this.maxDelay * 1000; 
         const startTime = Date.now();
         let backoff = 60000;
 
         while (Date.now() - startTime < maxBackoff) {
             try {
-                const resp = await this.longRunningRequest(`${projectName}/release`, { git_tag: gitTag }, await this.prepareVaultRequestOptions())
-                await this.watchTask(projectName, resp.data.task_uuid, taskLogger)
+                const resp = await this.longRunningRequest(path, data, await this.prepareVaultRequestOptions());
+                await action(path, resp.data.task_uuid, taskLogger);
                 return;
             } catch (e) {
                 console.error(`[ERROR] ${e}`);
             }
+
             if (!this.retry) {
-                throw `Release operation failed and retry is disabled`
+                throw `${path} operation failed and retry is disabled`;
             }
-            console.log(`[INFO] Retrying release request after ${backoff / 1000 / 60} minutes...`);
+
+            console.log(`[INFO] Retrying ${path} after ${backoff / 1000 / 60} minutes...`);
             await this.delay(backoff);
 
             backoff = Math.min(backoff * 2, maxBackoff);
         }
 
-        throw `Release operation exceeded maximum duration`
+        throw `${path} operation exceeded maximum duration`;
+    }
+
+    async release(projectName: string, gitTag: string, taskLogger: TaskLogger): Promise<void> {
+        await this.withBackoffRequest(
+            `${projectName}/release`,
+            { git_tag: gitTag },
+            taskLogger,
+            this.watchTask.bind(this)
+        );
     }
 
     async publish(projectName: string, taskLogger: TaskLogger): Promise<void> {
-        const maxBackoff = this.maxDelay * 1000; 
-        const startTime = Date.now();
-        let backoff = 60000; 
-        
-        while (Date.now() - startTime < maxBackoff) {
-            try {
-                const resp = await this.longRunningRequest(`${projectName}/publish`, {}, await this.prepareVaultRequestOptions());
-                await this.watchTask(projectName, resp.data.task_uuid, taskLogger);
-                return;
-            } catch (e) {
-                console.error(`[ERROR] ${e}`);
-            }
-            if (!this.retry) {
-                throw `Publish operation failed and retry is disabled`
-            }
-            console.log(`[INFO] Retrying publish request after ${backoff / 1000 / 60} minutes...`);
-            await this.delay(backoff);
-
-            backoff = Math.min(backoff * 2, maxBackoff);
-        }
-
-        throw `Publish operation exceeded maximum duration`
+        await this.withBackoffRequest(
+            `${projectName}/publish`,
+            {},
+            taskLogger,
+            this.watchTask.bind(this)
+        );
     }
 
     private async watchTask(projectName: string, taskID: string, taskLogger: TaskLogger): Promise<void> {
