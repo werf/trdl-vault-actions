@@ -174,7 +174,7 @@ export class TrdlClient {
             if (ctx.trdlTaskStatus != null) {
                 if (ctx.trdlTaskStatus.status == "FAILED") {
                     await this.gracefulShutdown(ctx)
-                    throw `trdl task ${taskID} have failed: ${ctx.trdlTaskStatus.reason}`
+                    throw `trdl task ${taskID} has failed: ${ctx.trdlTaskStatus.reason}`
                 }
 
                 if (ctx.trdlTaskStatus.status == "SUCCEEDED") {
