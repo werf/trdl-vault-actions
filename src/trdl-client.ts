@@ -26,6 +26,8 @@ export interface TrdlClientOptions {
     vaultAddr: string
     vaultToken?: string
     vaultApproleAuth?: VaultApproleAuth
+    retry: boolean
+    maxDelay: number
 }
 
 export interface VaultApproleAuth {
@@ -37,10 +39,14 @@ export class TrdlClient {
     private vaultToken?: string
     private vaultApproleAuth?: VaultApproleAuth
     private vaultClient: NodeVault.client
+    private retry: boolean
+    private maxDelay: number
 
     constructor(opts: TrdlClientOptions) {
         this.vaultToken = opts.vaultToken
         this.vaultApproleAuth = opts.vaultApproleAuth
+        this.retry = opts.retry
+        this.maxDelay = opts.maxDelay
 
         if (this.vaultToken != null && this.vaultApproleAuth != null) {
             throw `unable to use vaultToken and vaultApproleAuth at the same time`
@@ -88,14 +94,58 @@ export class TrdlClient {
         }
     }
 
+    private async withBackoffRequest(
+        path: string, 
+        data: any, 
+        taskLogger: TaskLogger,
+        action: (taskID: string, taskLogger: TaskLogger) => Promise<void>
+    ): Promise<void> {
+        const maxBackoff = this.maxDelay * 1000;
+        const startTime = Date.now();
+        let backoff = 60000;
+
+        while (Date.now() - startTime < maxBackoff) {
+            try {
+                const resp = await this.longRunningRequest(path, data, await this.prepareVaultRequestOptions());
+                await action(resp.data.task_uuid, taskLogger); 
+                return;
+            } catch (e) {
+                console.error(`[ERROR] ${e}`);
+            }
+
+            if (!this.retry) {
+                throw `${path} operation failed and retry is disabled`;
+            }
+
+            console.log(`[INFO] Retrying ${path} after ${backoff / 1000 / 60} minutes...`);
+            await this.delay(backoff);
+
+            backoff = Math.min(backoff * 2, maxBackoff);
+        }
+
+        throw `${path} operation exceeded maximum duration`;
+    }
+
     async release(projectName: string, gitTag: string, taskLogger: TaskLogger): Promise<void> {
-        var resp = await this.longRunningRequest(`${projectName}/release`, { git_tag: gitTag }, await this.prepareVaultRequestOptions())
-        return this.watchTask(projectName, resp.data.task_uuid, taskLogger)
+        await this.withBackoffRequest(
+            `${projectName}/release`,
+            { git_tag: gitTag }, 
+            taskLogger, 
+            async (taskID, taskLogger) => {
+                await this.watchTask(projectName, taskID, taskLogger);
+            }
+        );
     }
 
     async publish(projectName: string, taskLogger: TaskLogger): Promise<void> {
-        var resp = await this.longRunningRequest(`${projectName}/publish`, {}, await this.prepareVaultRequestOptions())
-        return this.watchTask(projectName, resp.data.task_uuid, taskLogger)
+        await this.withBackoffRequest(
+            `${projectName}/publish`,
+            {},
+            taskLogger,
+            async (taskID, taskLogger) => {
+                await this.watchTask(projectName, taskID, taskLogger);
+            }
+        );
     }
 
     private async watchTask(projectName: string, taskID: string, taskLogger: TaskLogger): Promise<void> {

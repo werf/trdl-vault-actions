@@ -5,7 +5,9 @@ export function getActionTrdlClientOptions(): trdl.TrdlClientOptions {
     var opts: trdl.TrdlClientOptions
 
     opts = {
-        vaultAddr: core.getInput('vault-addr', { required: true })
+        vaultAddr: core.getInput('vault-addr', { required: true }),
+        retry: core.getInput('retry', { required: false }) === 'true',
+        maxDelay: parseInt(core.getInput('max-delay', { required: false })) || 21600
     }
 
     var vaultToken = core.getInput('vault-token')
