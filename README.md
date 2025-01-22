@@ -9,36 +9,75 @@ Set of actions to publish releases of applications using trdl vault server:
 
 ```
 release:
-  name: Release
-  runs-on: ubuntu-latest
+  name: Perform werf release using trdl server
+  runs-on: ubuntu-22.04
   steps:
-    - name: Prepare git info
-      id: git_info
-      run: |
-        echo ::set-output name=GIT_TAG::${GITHUB_REF#refs/tags/}
-
-    - name: Release
+    - name: Release without retry
+      if: inputs.retry == 'false'
       uses: werf/trdl-vault-actions/release@main
       with:
-        vault-addr: ${{ secrets.VAULT_ADDR }}
-        vault-token: ${{ secrets.VAULT_TOKEN }}
-        project-name: myproject
-        git-tag: ${{ steps.git_info.outputs.GIT_TAG }}
+        vault-addr: ${{ secrets.TRDL_VAULT_ADDR }}
+        project-name: werf
+        git-tag: ${{ github.ref_name }}
+        vault-auth-method: approle
+        vault-role-id: ${{ secrets.TRDL_VAULT_ROLE_ID }}
+        vault-secret-id: ${{ secrets.TRDL_VAULT_SECRET_ID }}
+        retry: false
+
+    - name: Notify
+      uses: mattermost/action-mattermost-notify@master
+      with:
+        MATTERMOST_WEBHOOK_URL: ${{ secrets.LOOP_NOTIFICATION_WEBHOOK }}
+        MATTERMOST_CHANNEL: ${{ secrets.LOOP_NOTIFICATION_CHANNEL }}
+        TEXT: |
+          ${{ secrets.LOOP_NOTIFICATION_GROUP }} [${{ github.workflow }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) task sign pls
+
+    - name: Release with retry
+      uses: werf/trdl-vault-actions/release@main
+      with:
+        vault-addr: ${{ secrets.TRDL_VAULT_ADDR }}
+        project-name: werf
+        git-tag: ${{ github.ref_name }}
+        vault-auth-method: approle
+        vault-role-id: ${{ secrets.TRDL_VAULT_ROLE_ID }}
+        vault-secret-id: ${{ secrets.TRDL_VAULT_SECRET_ID }}
 ```
 
 ## Publish
 
 ```
 publish:
-  name: Publish
-  runs-on: ubuntu-latest
+  name: Publish release channels using trdl server
+  runs-on: ubuntu-22.04
   steps:
-    - name: Publish
+    - name: Publish without retry
+      if: inputs.retry == 'false'
+      continue-on-error: true
       uses: werf/trdl-vault-actions/publish@main
       with:
-        vault-addr: ${{ secrets.VAULT_ADDR }}
-        vault-token: ${{ secrets.VAULT_TOKEN }}
-        project-name: myproject
+        vault-addr: ${{ secrets.TRDL_VAULT_ADDR }}
+        project-name: werf
+        vault-auth-method: approle
+        vault-role-id: ${{ secrets.TRDL_VAULT_ROLE_ID }}
+        vault-secret-id: ${{ secrets.TRDL_VAULT_SECRET_ID }}
+        retry: false
+
+    - name: Notify
+      uses: mattermost/action-mattermost-notify@master
+      with:
+        MATTERMOST_WEBHOOK_URL: ${{ secrets.LOOP_NOTIFICATION_WEBHOOK }}
+        MATTERMOST_CHANNEL: ${{ secrets.LOOP_NOTIFICATION_CHANNEL }}
+        TEXT: |
+          ${{ secrets.LOOP_NOTIFICATION_GROUP }} [${{ github.workflow }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) task sign pls
+
+    - name: Publish with retry
+      uses: werf/trdl-vault-actions/publish@main
+      with:
+        vault-addr: ${{ secrets.TRDL_VAULT_ADDR }}
+        project-name: werf
+        vault-auth-method: approle
+        vault-role-id: ${{ secrets.TRDL_VAULT_ROLE_ID }}
+        vault-secret-id: ${{ secrets.TRDL_VAULT_SECRET_ID }}
 ```
 
 ## Common configuration
@@ -78,3 +117,14 @@ with:
 with:
   vault-addr: ${{ secrets.VAULT_ADDR }}
 ```
+
+### Retry
+
+```
+with:
+  retry: false
+```
+
+A flag that determines whether retries should be enabled in case of failure.
+If set to `true`, the system will retry failed operations with an increasing backoff delay until either the operation succeeds or the maximum delay (`maxDelay`) is reached `maxDelay` by default 6 hours or 21600 seconds (equals to github job timeout).
+If set to `false`, no retries will occur, and the task will immediately fail upon encountering an error. By default: `true`.
