@@ -92,5 +92,5 @@ with:
 
 Controls whether retries are enabled for failed operations.
 
-- **`true`** (default): Retries failed operations with exponentially increasing backoff delays, stopping after success or reaching `maxDelay`. Default `maxDelay` is 6 hours (21,600 seconds), which matches the GitHub job timeout.  
+- **`true`** (default): Retries failed operations with exponentially increasing backoff delays, stopping after success or reaching `maxDelay`. The default `maxDelay` is 6 hours (21600 seconds), which matches the GitHub job timeout.  
 - **`false`**: No retries. The task fails immediately upon error.
