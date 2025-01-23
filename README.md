@@ -90,4 +90,7 @@ with:
   retry: true
 ```
 
-A flag that determines whether retries should be enabled in case of failure. If set to `true`, the system will retry failed operations with an increasing backoff delay until either the operation succeeds or the maximum delay (`maxDelay`) is reached `maxDelay` by default 6 hours or 21600 seconds (equals to github job timeout). If set to `false`, no retries will occur, and the task will immediately fail upon encountering an error. By default: `true`.
+Controls whether retries are enabled for failed operations.
+
+- **`true`** (default): Retries failed operations with exponentially increasing backoff delays, stopping after success or reaching `maxDelay`. Default `maxDelay` is 6 hours (21,600 seconds), which matches the GitHub job timeout.  
+- **`false`**: No retries. The task fails immediately upon error.
