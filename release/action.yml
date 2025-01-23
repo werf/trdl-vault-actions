@@ -1,30 +1,30 @@
-name: 'Trdl releaser'
-description: 'Release project git tag using trdl build server'
+name: "Trdl releaser"
+description: "Release project git tag using trdl build server"
 inputs:
   vault-addr:
-    description: 'Address of the vault server running one or more vault-plugin-secrets-trdl instances'
+    description: "Address of the vault server running one or more vault-plugin-secrets-trdl instances"
     required: true
   project-name:
-    description: 'Project name, which is vault-plugin-secrets-trdl mount point instance'
+    description: "Project name, which is vault-plugin-secrets-trdl mount point instance"
     required: true
   git-tag:
-    description: 'Git tag of the application repository which will be used to build a release'
+    description: "Git tag of the application repository which will be used to build a release"
     required: true
   vault-auth-method:
-    description: 'Select auth method to perform login into vault to get client token. Supported methods: approle'
+    description: "Select auth method to perform login into vault to get client token. Supported methods: approle"
   vault-role-id:
-    description: 'Role ID for an approle auth method'
+    description: "Role ID for an approle auth method"
   vault-secret-id:
-    description: 'Secret ID for an approle auth method'
+    description: "Secret ID for an approle auth method"
   vault-token:
-    description: 'Specify client token to perform vault requests'
+    description: "Specify client token to perform vault requests"
   retry:
     description: |
       A flag that determines whether retries should be enabled in case of failure. 
       If set to `true`, the system will retry failed operations with an increasing backoff delay until either the operation succeeds or the maximum delay (`maxDelay`) is reached.
       If set to `false`, no retries will occur, and the task will immediately fail upon encountering an error.
     required: false
-    default: 'false'
+    default: "true"
   maxDelay:
     description: |
       The maximum delay time in seconds to be used for retries (backoff). 
@@ -33,8 +33,8 @@ inputs:
       If the `retry` flag is set to `false`, backoff will not be applied.
       default: 6 hours (equals to github job timeout)
     required: false
-    default: '21600'
+    default: "21600"
 
 runs:
-  using: 'node12'
-  main: '../dist/actions/release/index.js'
+  using: "node12"
+  main: "../dist/actions/release/index.js"
