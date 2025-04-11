@@ -35,6 +35,20 @@ export interface VaultApproleAuth {
     secretID: string
 }
 
+export interface ConfigurationOptions {
+    git_repo_url: string
+    git_trdl_channels_branch?: string
+    git_trdl_channels_path?: string
+    git_trdl_path?: string
+    initial_last_published_git_commit?: string
+    required_number_of_verified_signatures_on_commit: number
+    s3_access_key_id: string
+    s3_bucket_name: string
+    s3_endpoint: string
+    s3_region: string
+    s3_secret_access_key: string
+}
+
 export class TrdlClient {
     private vaultToken?: string
     private vaultApproleAuth?: VaultApproleAuth
@@ -124,6 +138,17 @@ export class TrdlClient {
         }
 
         throw `${path} operation exceeded maximum duration`;
+    }
+
+    async configure(projectName: string, config: ConfigurationOptions, taskLogger: TaskLogger): Promise<void> {
+        await this.withBackoffRequest(
+            `${projectName}/configure`,
+            config,
+            taskLogger,
+            async (taskID, taskLogger) => {
+                await this.watchTask(projectName, taskID, taskLogger);
+            }
+        );
     }
 
     async release(projectName: string, gitTag: string, taskLogger: TaskLogger): Promise<void> {

@@ -2,8 +2,37 @@
 
 Set of actions to publish releases of applications using trdl vault server:
 
+- [werf/trdl-vault-actions/configure](#configure);
 - [werf/trdl-vault-actions/release](#release);
 - [werf/trdl-vault-actions/publish](#publish).
+
+## Configure
+
+```
+configure:
+  name: Configure
+  runs-on: ubuntu-22.04
+  steps:
+    - name: Release with retry
+      uses: werf/trdl-vault-actions/configure@main
+      with:
+        vault-addr: ${{ secrets.TRDL_VAULT_ADDR }}
+        project-name: werf
+        vault-auth-method: approle
+        vault-role-id: ${{ secrets.TRDL_VAULT_ROLE_ID }}
+        vault-secret-id: ${{ secrets.TRDL_VAULT_SECRET_ID }}
+        git-repo-url: ${{ secrets.TRDL_GIT_REPO_URL }}
+        git-trdl-channels-branch: ${{ secrets.GIT_TRDL_CHANNELS_BRANCH }}
+        git-trdl-channels-path: ${{ secrets.GIT_TRDL_CHANNELS_PATH }}
+        git-trdl-path: ${{ secrets.GIT_TRDL_PATH }}
+        initial-last-published-git-commit: ${{ env.LAST_PUBLISHED_COMMIT }}
+        required-number-of-verified-signatures-on-commit: ${{ secrets.REQUIRED_NUMBER_OF_SIGNATURES }}
+        s3-access-key-id: ${{ secrets.S3_ACCESS_KEY_ID }}
+        s3-bucket-name: ${{ secrets.S3_BUCKET }}
+        s3-endpoint: ${{ secrets.S3_ENDPOINT }}
+        s3-region: ${{ secrets.S3_REGION }}
+        s3-secret-access-key: ${{ secrets.S3_ACCESS_KEY_ID }}
+```
 
 ## Release
 
