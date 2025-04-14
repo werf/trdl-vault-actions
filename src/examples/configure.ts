@@ -9,7 +9,7 @@ var trdlClient = new trdl.TrdlClient({
 console.log("Before configure")
 
 let config: ConfigurationOptions = {
-    git_repo_url: process.env.GIT_REPO_URL || "https://github.com/werf/trdl-vault-actions.git",
+    git_repo_url: process.env.GIT_REPO_URL || "https://github.com/werf/trdl-vault-actions",
     required_number_of_verified_signatures_on_commit: Number(process.env.COMMIT_COUNT) || 1,
     s3_access_key_id: process.env.S3_ACCESS_KEY_ID || "abcdef",
     s3_bucket_name: process.env.S3_BUCKET || "abcdef",
