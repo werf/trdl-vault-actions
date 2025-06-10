@@ -1,7 +1,7 @@
 import NodeVault = require("node-vault")
 import util = require("util")
 import os = require("os")
-import {Option} from "node-vault";
+import { Option } from "node-vault";
 
 type TaskLogger = (taskID: string, msg: string) => void
 
@@ -80,34 +80,34 @@ export class TrdlClient {
         while (true) {
             try {
                 return await this.vaultClient.write(path, data, requestOptions)
-            } catch(e) {
-                 if (e.message == "busy") {
-                     console.log(`Will retry request at ${path} after 5sec: server is busy at the moment`)
+            } catch (e) {
+                if (e.message == "busy") {
+                    console.log(`Will retry request at ${path} after 5sec: server is busy at the moment`)
 
-                     await this.delay(5000 )
+                    await this.delay(5000)
 
-                     continue
-                 }
+                    continue
+                }
 
-                 throw e
+                throw e
             }
         }
     }
 
-    private async withBackoffRequest(
-        path: string, 
-        data: any, 
+    private async withRetryRequest(
+        path: string,
+        data: any,
         taskLogger: TaskLogger,
         action: (taskID: string, taskLogger: TaskLogger) => Promise<void>
     ): Promise<void> {
-        const maxBackoff = this.maxDelay * 1000;
+        const interval = 60000; // 1 minute
+        const maxRetryTime = this.maxDelay * 1000;
         const startTime = Date.now();
-        let backoff = 60000;
 
-        while (Date.now() - startTime < maxBackoff) {
+        while (true) {
             try {
                 const resp = await this.longRunningRequest(path, data, await this.prepareVaultRequestOptions());
-                await action(resp.data.task_uuid, taskLogger); 
+                await action(resp.data.task_uuid, taskLogger);
                 return;
             } catch (e) {
                 console.error(`[ERROR] ${e}`);
@@ -117,20 +117,21 @@ export class TrdlClient {
                 throw `${path} operation failed and retry is disabled`;
             }
 
-            console.log(`[INFO] Retrying ${path} after ${backoff / 1000 / 60} minutes...`);
-            await this.delay(backoff);
+            if (Date.now() - startTime >= maxRetryTime) {
+                throw `${path} operation exceeded maximum retry duration of ${this.maxDelay} seconds`;
+            }
 
-            backoff = Math.min(backoff * 2, maxBackoff);
+            console.log(`[INFO] Retrying ${path} in 1 minute...`);
+            await this.delay(interval);
         }
-
-        throw `${path} operation exceeded maximum duration`;
     }
 
+
     async release(projectName: string, gitTag: string, taskLogger: TaskLogger): Promise<void> {
-        await this.withBackoffRequest(
+        await this.withRetryRequest(
             `${projectName}/release`,
-            { git_tag: gitTag }, 
-            taskLogger, 
+            { git_tag: gitTag },
+            taskLogger,
             async (taskID, taskLogger) => {
                 await this.watchTask(projectName, taskID, taskLogger);
             }
@@ -138,7 +139,7 @@ export class TrdlClient {
     }
 
     async publish(projectName: string, taskLogger: TaskLogger): Promise<void> {
-        await this.withBackoffRequest(
+        await this.withRetryRequest(
             `${projectName}/publish`,
             {},
             taskLogger,
