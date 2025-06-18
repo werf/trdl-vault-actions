@@ -38386,7 +38386,7 @@ function getActionTrdlClientOptions() {
     var opts;
     opts = {
         vaultAddr: core.getInput('vault-addr', { required: true }),
-        retry: core.getInput('retry', { required: false }) === 'true' || false,
+        retry: core.getInput('retry', { required: false }) === 'true',
         maxDelay: parseInt(core.getInput('max-delay', { required: false })) || 21600
     };
     var vaultToken = core.getInput('vault-token');
@@ -38547,12 +38547,12 @@ class TrdlClient {
             }
         });
     }
-    withBackoffRequest(path, data, taskLogger, action) {
+    withRetryRequest(path, data, taskLogger, action) {
         return __awaiter(this, void 0, void 0, function* () {
-            const maxBackoff = this.maxDelay * 1000;
+            const interval = 60000; // 1 minute
+            const maxRetryTime = this.maxDelay * 1000;
             const startTime = Date.now();
-            let backoff = 60000;
-            while (Date.now() - startTime < maxBackoff) {
+            while (true) {
                 try {
                     const resp = yield this.longRunningRequest(path, data, yield this.prepareVaultRequestOptions());
                     yield action(resp.data.task_uuid, taskLogger);
@@ -38564,23 +38564,24 @@ class TrdlClient {
                 if (!this.retry) {
                     throw `${path} operation failed and retry is disabled`;
                 }
-                console.log(`[INFO] Retrying ${path} after ${backoff / 1000 / 60} minutes...`);
-                yield this.delay(backoff);
-                backoff = Math.min(backoff * 2, maxBackoff);
+                if (Date.now() - startTime >= maxRetryTime) {
+                    throw `${path} operation exceeded maximum retry duration of ${this.maxDelay} seconds`;
+                }
+                console.log(`[INFO] Retrying ${path} in 1 minute...`);
+                yield this.delay(interval);
             }
-            throw `${path} operation exceeded maximum duration`;
         });
     }
     release(projectName, gitTag, taskLogger) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.withBackoffRequest(`${projectName}/release`, { git_tag: gitTag }, taskLogger, (taskID, taskLogger) => __awaiter(this, void 0, void 0, function* () {
+            yield this.withRetryRequest(`${projectName}/release`, { git_tag: gitTag }, taskLogger, (taskID, taskLogger) => __awaiter(this, void 0, void 0, function* () {
                 yield this.watchTask(projectName, taskID, taskLogger);
             }));
         });
     }
     publish(projectName, taskLogger) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.withBackoffRequest(`${projectName}/publish`, {}, taskLogger, (taskID, taskLogger) => __awaiter(this, void 0, void 0, function* () {
+            yield this.withRetryRequest(`${projectName}/publish`, {}, taskLogger, (taskID, taskLogger) => __awaiter(this, void 0, void 0, function* () {
                 yield this.watchTask(projectName, taskID, taskLogger);
             }));
         });
@@ -38606,7 +38607,7 @@ class TrdlClient {
                 if (ctx.trdlTaskStatus != null) {
                     if (ctx.trdlTaskStatus.status == "FAILED") {
                         yield this.gracefulShutdown(ctx);
-                        throw `trdl task ${taskID} have failed: ${ctx.trdlTaskStatus.reason}`;
+                        throw `trdl task ${taskID} has failed: ${ctx.trdlTaskStatus.reason}`;
                     }
                     if (ctx.trdlTaskStatus.status == "SUCCEEDED") {
                         yield this.gracefulShutdown(ctx);
