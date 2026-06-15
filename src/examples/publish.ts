@@ -2,7 +2,9 @@ import trdl = require("../trdl-client")
 
 var trdlClient = new trdl.TrdlClient({
     vaultAddr: process.env.VAULT_ADDR || 'http://172.17.0.4:8200',
-    vaultToken: process.env.VAULT_TOKEN || 'root'
+    vaultToken: process.env.VAULT_TOKEN || 'root',
+    retry: true,
+    maxDelay: 21600
 });
 
 console.log("Before release")
