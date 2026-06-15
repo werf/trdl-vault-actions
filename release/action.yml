@@ -36,5 +36,5 @@ inputs:
     default: "21600"
 
 runs:
-  using: "node12"
+  using: "node24"
   main: "../dist/actions/release/index.js"
